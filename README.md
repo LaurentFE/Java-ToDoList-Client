@@ -10,3 +10,5 @@ This is a WIP of a Java application that provides the user with a GUI to interfa
 Programmed in Java using IDE IntelliJ, GUI developed with Swing.
 
 Built with Maven.
+
+All icons come from https://www.untitledui.com/free-icons/
