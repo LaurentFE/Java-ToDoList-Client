@@ -1,10 +1,25 @@
 package fr.LaurentFE.todolistclient;
 
+import com.google.gson.Gson;
+import fr.LaurentFE.todolistclient.config.ConfigurationManager;
+import fr.LaurentFE.todolistclient.config.ServerConfig;
+
 import javax.swing.*;
 import javax.swing.plaf.nimbus.NimbusLookAndFeel;
 import java.awt.*;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.util.ArrayList;
 
 public class MainWindow extends JFrame {
+
+    private UserList userList;
+    private final ServerConfig conf;
+    ArrayList<JButton> user_buttons;
 
     private MainWindow() {
         super("Todo lists manager");
@@ -13,6 +28,9 @@ public class MainWindow extends JFrame {
         this.setLocationRelativeTo(null);
         this.setIconImage(new ImageIcon("src/main/resources/icon.png").getImage());
         this.setJMenuBar(this.createMenuBar());
+
+        ConfigurationManager.getInstance().loadServerConfig();
+        conf = ConfigurationManager.getInstance().getServerConfig();
 
         JPanel contentPane = (JPanel) this.getContentPane();
         contentPane.setLayout(new BorderLayout());
@@ -86,10 +104,16 @@ public class MainWindow extends JFrame {
     private JScrollPane createUserPanel() {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        JButton user1 = new JButton("User 1");
-        panel.add(user1);
-        JButton user2 = new JButton("123456789012345678901234567890123456789012345");
-        panel.add(user2);
+
+        this.user_buttons = new ArrayList<>();
+        getUsers();
+
+        for (User user : this.userList.getUsers()) {
+            JButton button = new JButton(user.getUser_name());
+            this.user_buttons.add(button);
+            panel.add(button);
+            // TODO : add Action to button
+        }
 
         return new JScrollPane(panel);
     }
@@ -126,6 +150,26 @@ public class MainWindow extends JFrame {
          */
         ToDoListWindow todo = new ToDoListWindow();
         todo.setVisible(true);
+    }
 
+    private void getUsers() {
+        String endpoint = this.conf.getServer_url() + "/rest/Users";
+        try {
+            try (HttpClient httpClient = HttpClient.newHttpClient()) {
+                HttpRequest getRequest = HttpRequest.newBuilder()
+                        .uri(new URI(endpoint))
+                        .GET()
+                        .build();
+                HttpResponse<String> response = httpClient.send(getRequest, HttpResponse.BodyHandlers.ofString());
+
+                Gson gson = new Gson();
+                String parsableJson = "{ \"users\":" + response.body() + "}";
+                this.userList = gson.fromJson(parsableJson, UserList.class);
+            } catch (IOException | InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
