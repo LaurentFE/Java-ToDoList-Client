@@ -21,6 +21,7 @@ import java.nio.charset.StandardCharsets;
 public class MainWindow extends JFrame {
 
     private UserList userList;
+    private ToDoListList listList;
     private final ServerConfig conf;
     private String current_user;
 
@@ -83,9 +84,7 @@ public class MainWindow extends JFrame {
         JToolBar toolBar = new JToolBar();
         toolBar.setFloatable(false);
 
-        JButton addUser = new JButton(new ImageIcon("src/main/resources/add-user.png"));
-        addUser.setAction(actAddUser);
-        toolBar.add(addUser);
+        toolBar.add(actAddUser);
         JButton addList = new JButton(new ImageIcon("src/main/resources/add-todo-list.png"));
         toolBar.add(addList);
         JButton openAllLists = new JButton(new ImageIcon("src/main/resources/open-todo-lists.png"));
@@ -114,6 +113,7 @@ public class MainWindow extends JFrame {
 
         for (User user : this.userList.getUsers()) {
             JButton button = new JButton(user.getUser_name());
+            button.addActionListener(getLists);
             panel.add(button);
             // TODO : add Action to button
         }
@@ -121,43 +121,28 @@ public class MainWindow extends JFrame {
         return new JScrollPane(panel);
     }
 
-    /*
-        When a user is selected, should fetch all user's lists from DB
-    */
     private JScrollPane createListPanel() {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         JButton openAll = new JButton("Open all lists");
         openAll.setIcon(new ImageIcon("src/main/resources/open-todo-lists.png"));
         panel.add(openAll);
-        JButton list1 = new JButton("List 1");
-        panel.add(list1);
-        JButton list2 = new JButton("123456789012345678901234567890123456789012345");
-        panel.add(list2);
+
+        this.getLists();
+
+        if (this.listList != null) {
+            for (ToDoList list : this.listList.getLists()) {
+                JButton button = new JButton(list.getLabel());
+                panel.add(button);
+                // TODO : add Action to button
+            }
+        }
 
         return new JScrollPane(panel);
     }
 
-    public static void main(String[] args) {
-        try {
-            UIManager.setLookAndFeel(new NimbusLookAndFeel());
-        } catch (UnsupportedLookAndFeelException e) {
-            System.err.println("Nimbus Look and feel not supported");
-        }
-
-        MainWindow mainWindow = new MainWindow();
-        mainWindow.setVisible(true);
-
-        /*
-            Temporary : this will be called upon selecting a todolist for a given user
-         */
-        ToDoListWindow todo = new ToDoListWindow();
-        todo.setVisible(true);
-    }
-
     private void getUsers() {
         String endpoint = this.conf.getServer_url() + "/rest/Users";
-        try {
             try (HttpClient httpClient = HttpClient.newHttpClient()) {
                 HttpRequest getRequest = HttpRequest.newBuilder()
                         .uri(new URI(endpoint))
@@ -165,14 +150,39 @@ public class MainWindow extends JFrame {
                         .build();
                 HttpResponse<String> response = httpClient.send(getRequest, HttpResponse.BodyHandlers.ofString());
 
-                Gson gson = new Gson();
-                String parsableJson = "{ \"users\":" + response.body() + "}";
-                this.userList = gson.fromJson(parsableJson, UserList.class);
-            } catch (IOException | InterruptedException e) {
+                if(response.body().contains("user_id")) {
+                    Gson gson = new Gson();
+                    String parsableJson = "{ \"users\":" + response.body() + "}";
+                    this.userList = gson.fromJson(parsableJson, UserList.class);
+                }
+            } catch (IOException | InterruptedException | URISyntaxException e) {
                 throw new RuntimeException(e);
             }
-        } catch (URISyntaxException e) {
-            throw new RuntimeException(e);
+    }
+
+    private void getLists() {
+        String endpoint = this.conf.getServer_url() + "/rest/ToDoLists?user_name=";
+        if (this.current_user != null) {
+            String userName = escapeLabelForAPI(this.current_user);
+            endpoint += userName;
+            System.out.println(endpoint);
+            try(HttpClient httpClient = HttpClient.newHttpClient()) {
+                HttpRequest getRequest = HttpRequest.newBuilder()
+                        .uri(new URI(endpoint))
+                        .GET()
+                        .build();
+                HttpResponse<String> response = httpClient.send(getRequest, HttpResponse.BodyHandlers.ofString());
+
+                if(response.body().contains("list_id")) {
+                    Gson gson = new Gson();
+                    String parsableJson = "{ \"lists\":" + response.body() + "}";
+                    this.listList = gson.fromJson(parsableJson, ToDoListList.class);
+                } else {
+                    listList = null;
+                }
+            } catch (URISyntaxException | InterruptedException | IOException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 
@@ -194,24 +204,29 @@ public class MainWindow extends JFrame {
                     JOptionPane.QUESTION_MESSAGE);
             if (userName != null) {
                 String escapedUserName = escapeLabelForAPI(userName);
-                try {
-                    String endpoint = conf.getServer_url() + "/rest/User?user_name=" + escapedUserName;
-                    System.out.println(endpoint);
-                    try (HttpClient httpClient = HttpClient.newHttpClient()) {
-                        HttpRequest getRequest = HttpRequest.newBuilder()
-                                .uri(new URI(endpoint))
-                                .POST(HttpRequest.BodyPublishers.ofString(""))
-                                .build();
-                        httpClient.send(getRequest, HttpResponse.BodyHandlers.ofString());
-                        current_user = userName;
-                        refreshContentPane();
-                    } catch (IOException | InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
-                } catch (URISyntaxException e) {
+                String endpoint = conf.getServer_url() + "/rest/User?user_name=" + escapedUserName;
+                System.out.println(endpoint);
+                try (HttpClient httpClient = HttpClient.newHttpClient()) {
+                    HttpRequest postRequest = HttpRequest.newBuilder()
+                            .uri(new URI(endpoint))
+                            .POST(HttpRequest.BodyPublishers.ofString(""))
+                            .build();
+                    httpClient.send(postRequest, HttpResponse.BodyHandlers.ofString());
+                    current_user = userName;
+                    refreshContentPane();
+                } catch (IOException | InterruptedException | URISyntaxException e) {
                     throw new RuntimeException(e);
                 }
             }
+        }
+    };
+
+    private final AbstractAction getLists = new AbstractAction() {
+        @Override
+        public void actionPerformed(ActionEvent evt) {
+            JButton userButton = (JButton) evt.getSource();
+            current_user = userButton.getText();
+            refreshContentPane();
         }
     };
 
@@ -225,4 +240,20 @@ public class MainWindow extends JFrame {
                 .replace("%7E", "~");
     }
 
+    public static void main(String[] args) {
+        try {
+            UIManager.setLookAndFeel(new NimbusLookAndFeel());
+        } catch (UnsupportedLookAndFeelException e) {
+            System.err.println("Nimbus Look and feel not supported");
+        }
+
+        MainWindow mainWindow = new MainWindow();
+        mainWindow.setVisible(true);
+
+        /*
+            Temporary : this will be called upon selecting a todolist for a given user
+         */
+        //ToDoListWindow todo = new ToDoListWindow();
+        //todo.setVisible(true);
+    }
 }
