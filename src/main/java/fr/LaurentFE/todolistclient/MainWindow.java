@@ -7,19 +7,22 @@ import fr.LaurentFE.todolistclient.config.ServerConfig;
 import javax.swing.*;
 import javax.swing.plaf.nimbus.NimbusLookAndFeel;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.ArrayList;
+import java.nio.charset.StandardCharsets;
 
 public class MainWindow extends JFrame {
 
     private UserList userList;
     private final ServerConfig conf;
-    ArrayList<JButton> user_buttons;
+    private String current_user;
 
     private MainWindow() {
         super("Todo lists manager");
@@ -32,11 +35,18 @@ public class MainWindow extends JFrame {
         ConfigurationManager.getInstance().loadServerConfig();
         conf = ConfigurationManager.getInstance().getServerConfig();
 
+        refreshContentPane();
+    }
+
+    private void refreshContentPane() {
         JPanel contentPane = (JPanel) this.getContentPane();
+        contentPane.removeAll();
         contentPane.setLayout(new BorderLayout());
 
         contentPane.add(this.createToolBar(), BorderLayout.NORTH);
         contentPane.add(this.createMainDisplay(), BorderLayout.CENTER);
+        contentPane.revalidate();
+        contentPane.repaint();
     }
 
     private JMenuBar createMenuBar() {
@@ -46,7 +56,7 @@ public class MainWindow extends JFrame {
         menuFile.setMnemonic('F');
 
         JMenuItem addUser = new JMenuItem("Add User");
-        addUser.setIcon(new ImageIcon("src/main/resources/add-user.png"));
+        addUser.setAction(actAddUser);
         menuFile.add(addUser);
 
         JMenuItem addToDoList = new JMenuItem("Add Todo List");
@@ -73,10 +83,8 @@ public class MainWindow extends JFrame {
         JToolBar toolBar = new JToolBar();
         toolBar.setFloatable(false);
 
-        /*
-            When creating a new user : should reload UserPanel
-         */
         JButton addUser = new JButton(new ImageIcon("src/main/resources/add-user.png"));
+        addUser.setAction(actAddUser);
         toolBar.add(addUser);
         JButton addList = new JButton(new ImageIcon("src/main/resources/add-todo-list.png"));
         toolBar.add(addList);
@@ -98,19 +106,14 @@ public class MainWindow extends JFrame {
         return splitPane;
     }
 
-    /*
-        Should fetch all users from DB
-     */
     private JScrollPane createUserPanel() {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
 
-        this.user_buttons = new ArrayList<>();
         getUsers();
 
         for (User user : this.userList.getUsers()) {
             JButton button = new JButton(user.getUser_name());
-            this.user_buttons.add(button);
             panel.add(button);
             // TODO : add Action to button
         }
@@ -172,4 +175,54 @@ public class MainWindow extends JFrame {
             throw new RuntimeException(e);
         }
     }
+
+    private final AbstractAction actAddUser = new AbstractAction() {
+        {
+            putValue(Action.NAME, "Add User");
+            putValue(Action.SHORT_DESCRIPTION, "Add User");
+            putValue(Action.SMALL_ICON, new ImageIcon("src/main/resources/add-user.png"));
+            putValue(Action.MNEMONIC_KEY, KeyEvent.VK_U);
+            putValue(Action.ACCELERATOR_KEY,
+                    KeyStroke.getKeyStroke(KeyEvent.VK_U, KeyEvent.CTRL_DOWN_MASK));
+        }
+        @Override
+        public void actionPerformed(ActionEvent evt) {
+            String userName = JOptionPane.showInputDialog(
+                    null,
+                    "Enter new user name",
+                    "Add user",
+                    JOptionPane.QUESTION_MESSAGE);
+            if (userName != null) {
+                String escapedUserName = escapeLabelForAPI(userName);
+                try {
+                    String endpoint = conf.getServer_url() + "/rest/User?user_name=" + escapedUserName;
+                    System.out.println(endpoint);
+                    try (HttpClient httpClient = HttpClient.newHttpClient()) {
+                        HttpRequest getRequest = HttpRequest.newBuilder()
+                                .uri(new URI(endpoint))
+                                .POST(HttpRequest.BodyPublishers.ofString(""))
+                                .build();
+                        httpClient.send(getRequest, HttpResponse.BodyHandlers.ofString());
+                        current_user = userName;
+                        refreshContentPane();
+                    } catch (IOException | InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                } catch (URISyntaxException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+    };
+
+    private String escapeLabelForAPI(String label) {
+        return URLEncoder.encode(label, StandardCharsets.UTF_8)
+                .replace("+", "%20")
+                .replace("%21", "!")
+                .replace("%27", "'")
+                .replace("%28", "(")
+                .replace("%29", ")")
+                .replace("%7E", "~");
+    }
+
 }
