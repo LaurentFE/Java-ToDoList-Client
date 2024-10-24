@@ -76,7 +76,7 @@ public class ToDoListWindow extends JInternalFrame {
         return toolBar;
     }
 
-    private JPanel createItemsDisplay() {
+    private JScrollPane createItemsDisplay() {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
 
@@ -84,7 +84,7 @@ public class ToDoListWindow extends JInternalFrame {
             panel.add(createListItemDisplay(item));
         }
 
-        return panel;
+        return new JScrollPane(panel);
     }
 
     private JPanel createListItemDisplay(ListItem item) {
