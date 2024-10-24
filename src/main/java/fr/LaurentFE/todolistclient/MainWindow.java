@@ -1,7 +1,7 @@
 package fr.LaurentFE.todolistclient;
 
 import com.google.gson.Gson;
-import fr.LaurentFE.todolistclient.config.ConfigurationManager;
+import fr.LaurentFE.todolistclient.config.ServerManager;
 import fr.LaurentFE.todolistclient.config.ServerConfig;
 
 import javax.swing.*;
@@ -12,14 +12,6 @@ import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.beans.PropertyVetoException;
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URLEncoder;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
 public class MainWindow extends JFrame {
@@ -43,8 +35,8 @@ public class MainWindow extends JFrame {
         this.setIconImage(new ImageIcon("src/main/resources/icon.png").getImage());
         this.setJMenuBar(this.createMenuBar());
 
-        ConfigurationManager.getInstance().loadServerConfig();
-        conf = ConfigurationManager.getInstance().getServerConfig();
+        ServerManager.getInstance().loadServerConfig();
+        conf = ServerManager.getInstance().getServerConfig();
 
         refreshContentPane();
     }
@@ -154,45 +146,26 @@ public class MainWindow extends JFrame {
 
     private void getUsers() {
         String endpoint = this.conf.getServer_url() + "/rest/Users";
-            try (HttpClient httpClient = HttpClient.newHttpClient()) {
-                HttpRequest getRequest = HttpRequest.newBuilder()
-                        .uri(new URI(endpoint))
-                        .GET()
-                        .build();
-                HttpResponse<String> response = httpClient.send(getRequest, HttpResponse.BodyHandlers.ofString());
-
-                if(response.body().contains("user_id")) {
-                    Gson gson = new Gson();
-                    String parsableJson = "{ \"users\":" + response.body() + "}";
-                    this.userList = gson.fromJson(parsableJson, UserList.class);
-                }
-            } catch (IOException | InterruptedException | URISyntaxException e) {
-                throw new RuntimeException(e);
-            }
+        String response = ServerManager.sendGetRequest(endpoint);
+        if(response.contains("user_id")) {
+            Gson gson = new Gson();
+            String parsableJson = "{ \"users\":" + response + "}";
+            this.userList = gson.fromJson(parsableJson, UserList.class);
+        }
     }
 
     private void getLists() {
         String endpoint = this.conf.getServer_url() + "/rest/ToDoLists?user_name=";
         if (this.currentUser != null) {
-            String userName = escapeLabelForAPI(this.currentUser);
-            endpoint += userName;
-            System.out.println(endpoint);
-            try(HttpClient httpClient = HttpClient.newHttpClient()) {
-                HttpRequest getRequest = HttpRequest.newBuilder()
-                        .uri(new URI(endpoint))
-                        .GET()
-                        .build();
-                HttpResponse<String> response = httpClient.send(getRequest, HttpResponse.BodyHandlers.ofString());
-
-                if(response.body().contains("list_id")) {
-                    Gson gson = new Gson();
-                    String parsableJson = "{ \"lists\":" + response.body() + "}";
-                    this.listList = gson.fromJson(parsableJson, ToDoListList.class);
-                } else {
-                    listList = null;
-                }
-            } catch (URISyntaxException | InterruptedException | IOException e) {
-                throw new RuntimeException(e);
+            String escapedUserName = ServerManager.escapeLabelForAPI(this.currentUser);
+            endpoint += escapedUserName;
+            String response = ServerManager.sendGetRequest(endpoint);
+            if(response.contains("list_id")) {
+                Gson gson = new Gson();
+                String parsableJson = "{ \"lists\":" + response + "}";
+                this.listList = gson.fromJson(parsableJson, ToDoListList.class);
+            } else {
+                listList = null;
             }
         }
     }
@@ -214,9 +187,9 @@ public class MainWindow extends JFrame {
                     "Add user",
                     JOptionPane.QUESTION_MESSAGE);
             if (userName != null) {
-                String escapedUserName = escapeLabelForAPI(userName);
+                String escapedUserName = ServerManager.escapeLabelForAPI(userName);
                 String endpoint = conf.getServer_url() + "/rest/User?user_name=" + escapedUserName;
-                sendPostRequest(endpoint);
+                ServerManager.sendPostRequest(endpoint);
                 currentUser = userName;
                 refreshContentPane();
             }
@@ -289,13 +262,13 @@ public class MainWindow extends JFrame {
                         "Add todo list",
                         JOptionPane.QUESTION_MESSAGE);
                 if (listName != null) {
-                    String escapedUserName = escapeLabelForAPI(currentUser);
-                    String escapedListName = escapeLabelForAPI(listName);
+                    String escapedUserName = ServerManager.escapeLabelForAPI(currentUser);
+                    String escapedListName = ServerManager.escapeLabelForAPI(listName);
                     String endpoint = conf.getServer_url()
                             + "/rest/ToDoList?user_name=" + escapedUserName
                             + "&list_name=" + escapedListName;
                     System.out.println(endpoint);
-                    sendPostRequest(endpoint);
+                    ServerManager.sendPostRequest(endpoint);
                     refreshContentPane();
                     openListIfNotOpened(new ToDoList(0, listName, null));
                 }
@@ -323,18 +296,6 @@ public class MainWindow extends JFrame {
         }
     };
 
-    private void sendPostRequest(String endpoint) {
-        try (HttpClient httpClient = HttpClient.newHttpClient()) {
-            HttpRequest postRequest = HttpRequest.newBuilder()
-                    .uri(new URI(endpoint))
-                    .POST(HttpRequest.BodyPublishers.ofString(""))
-                    .build();
-            httpClient.send(postRequest, HttpResponse.BodyHandlers.ofString());
-        } catch (IOException | InterruptedException | URISyntaxException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     private void openListIfNotOpened(ToDoList list) {
         JInternalFrame[] openedLists = desktopPane.getAllFrames();
         if (openedLists.length != 0) {
@@ -361,7 +322,7 @@ public class MainWindow extends JFrame {
     }
 
     private void openList(ToDoList list) {
-        ToDoListWindow todo = new ToDoListWindow(list);
+        ToDoListWindow todo = new ToDoListWindow(list, currentUser);
         todo.setVisible(true);
         desktopPane.add(todo);
         todo.moveToFront();
@@ -370,16 +331,6 @@ public class MainWindow extends JFrame {
         } catch (PropertyVetoException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    private String escapeLabelForAPI(String label) {
-        return URLEncoder.encode(label, StandardCharsets.UTF_8)
-                .replace("+", "%20")
-                .replace("%21", "!")
-                .replace("%27", "'")
-                .replace("%28", "(")
-                .replace("%29", ")")
-                .replace("%7E", "~");
     }
 
     private void confirmClose() {

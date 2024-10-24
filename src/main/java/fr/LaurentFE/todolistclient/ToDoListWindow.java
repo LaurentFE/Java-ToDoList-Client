@@ -1,19 +1,28 @@
 package fr.LaurentFE.todolistclient;
 
+import com.google.gson.Gson;
+import fr.LaurentFE.todolistclient.config.ServerManager;
+
 import javax.swing.*;
 import javax.swing.event.InternalFrameAdapter;
 import javax.swing.event.InternalFrameEvent;
 import java.awt.*;
+import java.awt.event.ActionEvent;
 
 public class ToDoListWindow extends JInternalFrame {
 
-    private final ToDoList toDoList;
+    private ToDoList toDoList;
     static int openFrameCount = 0;
     static final int xOffset = 30, yOffset = 30;
+    static final int baseHeight = 70;
+    static final int heightIncrement = 50;
+    private final String userName;
 
-    public ToDoListWindow(ToDoList list) {
+    public ToDoListWindow(ToDoList list, String userName) {
         super(list.getLabel(), true, true, false, false);
         openFrameCount++;
+        toDoList = list;
+        this.userName = userName;
 
         this.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         this.addInternalFrameListener(new InternalFrameAdapter() {
@@ -22,56 +31,37 @@ public class ToDoListWindow extends JInternalFrame {
                 dispose();
             }
         });
-        this.setSize(400, 300);
-
+        this.setSize(400, baseHeight);
         this.setLocation(xOffset * openFrameCount, yOffset * openFrameCount);
 
-        //this.setIconImage(new ImageIcon("src/main/resources/todolist.png").getImage());
-        this.setJMenuBar(this.createMenuBar());
-
-        toDoList = list;
-
-        JPanel contentPane = (JPanel) this.getContentPane();
-        contentPane.setLayout(new BorderLayout());
-
-        contentPane.add(this.createToolBar(), BorderLayout.NORTH);
-        contentPane.add(this.createItemsDisplay(), BorderLayout.CENTER);
+        refreshContentPane();
     }
 
-    private JMenuBar createMenuBar() {
-        JMenuBar menuBar = new JMenuBar();
+    private void refreshContentPane() {
+        JPanel contentPane = (JPanel) this.getContentPane();
+        contentPane.removeAll();
 
-        JMenu menuFile = new JMenu("File");
-        menuFile.setMnemonic('F');
+        contentPane.setLayout(new BorderLayout());
 
-        JMenuItem addItem = new JMenuItem("Add Item");
-        addItem.setIcon(new ImageIcon("src/main/resources/add-item.png"));
-        menuFile.add(addItem);
-
-        menuFile.addSeparator();
-
-        JMenuItem editListName = new JMenuItem("Edit List Name");
-        editListName.setIcon(new ImageIcon("src/main/resources/edit-list.png"));
-        menuFile.add(editListName);
-
-        menuFile.addSeparator();
-
-        JMenuItem closeList = new JMenuItem("Close List");
-        closeList.setIcon(new ImageIcon("src/main/resources/exit.png"));
-        menuFile.add(closeList);
-
-        menuBar.add(menuFile);
-        return menuBar;
+        if (toDoList.getItems() != null) {
+            this.reshape(this.getX(),
+                    this.getY(),
+                    this.getWidth(),
+                    baseHeight + heightIncrement * toDoList.getItems().size());
+        }
+        contentPane.add(this.createToolBar(), BorderLayout.NORTH);
+        contentPane.add(this.createItemsDisplay(), BorderLayout.CENTER);
+        contentPane.revalidate();
+        contentPane.repaint();
     }
 
     private JToolBar createToolBar() {
         JToolBar toolBar = new JToolBar();
         toolBar.setFloatable(false);
 
-        JButton addItem = new JButton(new ImageIcon("src/main/resources/add-item.png"));
-        toolBar.add(addItem);
         JButton editListName = new JButton(new ImageIcon("src/main/resources/edit-list.png"));
         toolBar.add(editListName);
+        toolBar.add(actAddItem);
 
         return toolBar;
     }
@@ -111,7 +101,47 @@ public class ToDoListWindow extends JInternalFrame {
         return panel;
     }
 
+    private void refreshToDoList() {
+        String escapedUserName = ServerManager.escapeLabelForAPI(userName);
+        String escapedListName = ServerManager.escapeLabelForAPI(toDoList.getLabel());
+        String endpoint = ServerManager.getInstance()
+                .getServerConfig().getServer_url() + "/rest/ToDoList?user_name=" + escapedUserName
+                + "&list_name=" + escapedListName;
+
+        String response = ServerManager.sendGetRequest(endpoint);
+        Gson gson = new Gson();
+        this.toDoList = gson.fromJson(response, ToDoList.class);
+    }
+
     public static void resetOpenFrameCount() {
         openFrameCount = 0;
     }
+
+    private final AbstractAction actAddItem = new AbstractAction() {
+        {
+            putValue(Action.NAME, "Add Item");
+            putValue(Action.SHORT_DESCRIPTION, "Add Item");
+            putValue(Action.SMALL_ICON, new ImageIcon("src/main/resources/add-item.png"));
+        }
+        @Override
+        public void actionPerformed(ActionEvent evt) {
+            String itemName = JOptionPane.showInputDialog(
+                    null,
+                    "Enter new list item label",
+                    "Add item",
+                    JOptionPane.QUESTION_MESSAGE);
+            if (itemName != null) {
+                String escapedUserName = ServerManager.escapeLabelForAPI(userName);
+                String escapedListName = ServerManager.escapeLabelForAPI(toDoList.getLabel());
+                String escapedItemName = ServerManager.escapeLabelForAPI(itemName);
+                String endpoint = ServerManager.getInstance()
+                        .getServerConfig().getServer_url() + "/rest/ListItem?user_name=" + escapedUserName
+                        + "&list_name=" + escapedListName
+                        + "&item_name=" + escapedItemName;
+                ServerManager.sendPostRequest(endpoint);
+                refreshToDoList();
+                refreshContentPane();
+            }
+        }
+    };
 }
