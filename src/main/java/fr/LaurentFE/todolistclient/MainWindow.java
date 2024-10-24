@@ -111,25 +111,33 @@ public class MainWindow extends JFrame {
 
     private JScrollPane createUserPanel() {
         JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setLayout(new GridBagLayout());
+        GridBagConstraints c = new GridBagConstraints();
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.anchor = GridBagConstraints.PAGE_START;
 
         getUsers();
-
-        for (User user : this.userList.getUsers()) {
-            JButton button = new JButton(user.getUser_name());
+        for (int i=0; i<this.userList.getUsers().size(); i++) {
+            JButton button = new JButton(this.userList.getUsers().get(i).getUser_name());
             button.addActionListener(actGetLists);
-            panel.add(button);
+            c.gridx = 0;
+            c.gridy = i+1;
+            if (i==this.userList.getUsers().size()-1) {
+                c.weighty = 1;
+            }
+            panel.add(button, c);
         }
 
         return new JScrollPane(panel);
     }
 
     private JScrollPane createListScrollPane() {
+
         listSplitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
 
         desktopPane = new JDesktopPane();
 
-        listSplitPane.setLeftComponent(createListPane());
+        listSplitPane.setLeftComponent(new JScrollPane(createListPane()));
         listSplitPane.setRightComponent(desktopPane);
         listSplitPane.setResizeWeight(0);
 
@@ -138,18 +146,29 @@ public class MainWindow extends JFrame {
 
     private JPanel createListPane() {
         JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setLayout(new GridBagLayout());
+        GridBagConstraints c = new GridBagConstraints();
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.anchor = GridBagConstraints.PAGE_START;
+
         this.getLists();
 
         if (this.listList != null) {
             JButton openAll = new JButton("Open all lists");
             openAll.addActionListener(actOpenAllLists);
-            panel.add(openAll);
-
-            for (ToDoList list : this.listList.getLists()) {
-                JButton button = new JButton(list.getLabel());
+            c.gridx = 0;
+            c.gridy = 0;
+            c.weighty = 0;
+            panel.add(openAll, c);
+            for (int i=0; i<this.listList.getLists().size(); i++) {
+                JButton button = new JButton(this.listList.getLists().get(i).getLabel());
                 button.addActionListener(actOpenList);
-                panel.add(button);
+                c.gridx = 0;
+                c.gridy = i+1;
+                if (i==this.listList.getLists().size()-1) {
+                    c.weighty = 1;
+                }
+                panel.add(button, c);
             }
         }
 
