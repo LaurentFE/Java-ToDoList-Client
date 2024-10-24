@@ -8,6 +8,7 @@ import javax.swing.event.InternalFrameAdapter;
 import javax.swing.event.InternalFrameEvent;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.ItemEvent;
 
 public class ToDoListWindow extends JInternalFrame {
 
@@ -88,7 +89,9 @@ public class ToDoListWindow extends JInternalFrame {
 
         JPanel listPanel = new JPanel();
         listPanel.setLayout(new BoxLayout(listPanel, BoxLayout.X_AXIS));
-        JCheckBox checkBox = new JCheckBox("",item.isChecked());
+        JCheckBox checkBox = new JCheckBox("", item.isChecked());
+        checkBox.setName(item.getLabel());
+        checkBox.addItemListener(this::checkStateChanged);
         JLabel label = new JLabel(item.getLabel());
 
         JPanel editPanel = new JPanel();
@@ -102,6 +105,26 @@ public class ToDoListWindow extends JInternalFrame {
         panel.add(editPanel, BorderLayout.EAST);
 
         return panel;
+    }
+
+    void checkStateChanged(ItemEvent e) {
+        System.out.println("checkStateChanged");
+        JCheckBox checkBox = (JCheckBox) e.getSource();
+        String escapedUserName = ServerManager.escapeLabelForAPI(userName);
+        String escapedListName = ServerManager.escapeLabelForAPI(toDoList.getLabel());
+        String escapedItemName = ServerManager.escapeLabelForAPI(checkBox.getName());
+        String isChecked = checkBox.isSelected() + "";
+
+        String endpoint = ServerManager.getInstance()
+                .getServerConfig().getServer_url() + "/rest/ListItemCheck?user_name=" + escapedUserName
+                + "&list_name=" + escapedListName
+                + "&item_name=" + escapedItemName
+                + "&is_checked=" + isChecked;
+
+        ServerManager.sendPutRequest(endpoint);
+        refreshToDoList();
+        refreshContentPane();
+        mainWindowRef.refreshListContentPane();
     }
 
     private void refreshToDoList() {
@@ -176,5 +199,5 @@ public class ToDoListWindow extends JInternalFrame {
                 mainWindowRef.refreshListContentPane();
             }
         }
-    } ;
+    };
 }
