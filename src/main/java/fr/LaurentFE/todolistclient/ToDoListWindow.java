@@ -109,7 +109,6 @@ public class ToDoListWindow extends JInternalFrame {
     }
 
     void checkStateChanged(ItemEvent e) {
-        System.out.println("checkStateChanged");
         JCheckBox checkBox = (JCheckBox) e.getSource();
         String escapedUserName = ServerManager.escapeLabelForAPI(userName);
         String escapedListName = ServerManager.escapeLabelForAPI(toDoList.getLabel());

@@ -279,7 +279,6 @@ public class MainWindow extends JFrame {
                     String endpoint = conf.getServer_url()
                             + "/rest/ToDoList?user_name=" + escapedUserName
                             + "&list_name=" + escapedListName;
-                    System.out.println(endpoint);
                     ServerManager.sendPostRequest(endpoint);
                     refreshListContentPane();
                     openListIfNotOpened(new ToDoList(0, listName, null));
