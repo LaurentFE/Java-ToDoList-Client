@@ -21,6 +21,7 @@ public class MainWindow extends JFrame {
     private final ServerConfig conf;
     private String currentUser;
     private JDesktopPane desktopPane;
+    private JSplitPane listSplitPane;
 
     private MainWindow() {
         super("Todo lists manager");
@@ -51,6 +52,12 @@ public class MainWindow extends JFrame {
         contentPane.add(this.createMainDisplay(), BorderLayout.CENTER);
         contentPane.revalidate();
         contentPane.repaint();
+    }
+
+    private void refreshListContentPane() {
+        listSplitPane.setLeftComponent(createListPane());
+        listSplitPane.getLeftComponent().revalidate();
+        listSplitPane.getLeftComponent().repaint();
     }
 
     private JMenuBar createMenuBar() {
@@ -92,7 +99,7 @@ public class MainWindow extends JFrame {
 
     private JSplitPane createMainDisplay() {
         JScrollPane leftPanel = createUserPanel();
-        JScrollPane rightPanel = createListPanel();
+        JScrollPane rightPanel = createListScrollPane();
 
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
         splitPane.setLeftComponent(leftPanel);
@@ -117,9 +124,19 @@ public class MainWindow extends JFrame {
         return new JScrollPane(panel);
     }
 
-    private JScrollPane createListPanel() {
-        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+    private JScrollPane createListScrollPane() {
+        listSplitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
 
+        desktopPane = new JDesktopPane();
+
+        listSplitPane.setLeftComponent(createListPane());
+        listSplitPane.setRightComponent(desktopPane);
+        listSplitPane.setResizeWeight(0);
+
+        return new JScrollPane(listSplitPane);
+    }
+
+    private JPanel createListPane() {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         this.getLists();
@@ -136,12 +153,7 @@ public class MainWindow extends JFrame {
             }
         }
 
-        desktopPane = new JDesktopPane();
-
-        splitPane.setLeftComponent(panel);
-        splitPane.setRightComponent(desktopPane);
-        splitPane.setResizeWeight(0);
-        return new JScrollPane(splitPane);
+        return panel;
     }
 
     private void getUsers() {
@@ -269,7 +281,7 @@ public class MainWindow extends JFrame {
                             + "&list_name=" + escapedListName;
                     System.out.println(endpoint);
                     ServerManager.sendPostRequest(endpoint);
-                    refreshContentPane();
+                    refreshListContentPane();
                     openListIfNotOpened(new ToDoList(0, listName, null));
                 }
             } else {
