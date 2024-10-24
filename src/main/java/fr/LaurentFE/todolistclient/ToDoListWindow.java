@@ -183,7 +183,10 @@ public class ToDoListWindow extends JInternalFrame {
                     null,
                     "Enter new list name",
                     "Edit list name",
-                    JOptionPane.QUESTION_MESSAGE);
+                    JOptionPane.QUESTION_MESSAGE,
+                    null,
+                    null,
+                    toDoList.getLabel()).toString();
             if (newListName != null) {
                 String escapedUserName = ServerManager.escapeLabelForAPI(userName);
                 String escapedListName = ServerManager.escapeLabelForAPI(toDoList.getLabel());
