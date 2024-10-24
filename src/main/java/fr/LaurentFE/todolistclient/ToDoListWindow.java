@@ -80,8 +80,10 @@ public class ToDoListWindow extends JInternalFrame {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
 
-        for (ListItem item : toDoList.getItems()) {
-            panel.add(createListItemDisplay(item));
+        if (toDoList.getItems() != null) {
+            for (ListItem item : toDoList.getItems()) {
+                panel.add(createListItemDisplay(item));
+            }
         }
 
         return new JScrollPane(panel);
