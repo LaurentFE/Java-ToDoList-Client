@@ -9,6 +9,8 @@ import javax.swing.plaf.nimbus.NimbusLookAndFeel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.beans.PropertyVetoException;
 import java.io.IOException;
 import java.net.URI;
@@ -30,7 +32,12 @@ public class MainWindow extends JFrame {
 
     private MainWindow() {
         super("Todo lists manager");
-        this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        this.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+        this.addWindowListener(new WindowAdapter() {
+            public void windowClosing(WindowEvent e) {
+                confirmClose();
+            }
+        });
         this.setSize(1400, 700);
         this.setLocationRelativeTo(null);
         this.setIconImage(new ImageIcon("src/main/resources/icon.png").getImage());
@@ -73,8 +80,7 @@ public class MainWindow extends JFrame {
 
         menuFile.addSeparator();
 
-        JMenuItem mnuExit = new JMenuItem("Exit");
-        mnuExit.setIcon(new ImageIcon("src/main/resources/exit.png"));
+        JMenuItem mnuExit = new JMenuItem(actExit);
         menuFile.add(mnuExit);
 
         menuBar.add(menuFile);
@@ -302,6 +308,21 @@ public class MainWindow extends JFrame {
         }
     };
 
+    private final AbstractAction actExit = new AbstractAction() {
+        {
+            putValue(Action.NAME, "Exit");
+            putValue(Action.SHORT_DESCRIPTION, "Exit");
+            putValue(Action.SMALL_ICON, new ImageIcon("src/main/resources/exit.png"));
+            putValue(Action.MNEMONIC_KEY, KeyEvent.VK_E);
+            putValue(Action.ACCELERATOR_KEY,
+                    KeyStroke.getKeyStroke(KeyEvent.VK_F4, KeyEvent.ALT_DOWN_MASK));
+        }
+        @Override
+        public void actionPerformed(ActionEvent evt) {
+            confirmClose();
+        }
+    };
+
     private void sendPostRequest(String endpoint) {
         try (HttpClient httpClient = HttpClient.newHttpClient()) {
             HttpRequest postRequest = HttpRequest.newBuilder()
@@ -359,6 +380,17 @@ public class MainWindow extends JFrame {
                 .replace("%28", "(")
                 .replace("%29", ")")
                 .replace("%7E", "~");
+    }
+
+    private void confirmClose() {
+        int exitValue = JOptionPane.showConfirmDialog(
+                null,
+                "Are you sure you want to exit ?",
+                "Exit",
+                JOptionPane.YES_NO_OPTION);
+        if (exitValue == JOptionPane.YES_OPTION) {
+            dispose();
+        }
     }
 
     public static void main(String[] args) {
