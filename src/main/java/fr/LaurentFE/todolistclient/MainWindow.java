@@ -9,6 +9,7 @@ import javax.swing.plaf.nimbus.NimbusLookAndFeel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
+import java.beans.PropertyVetoException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -17,18 +18,20 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 
 public class MainWindow extends JFrame {
 
     private UserList userList;
     private ToDoListList listList;
     private final ServerConfig conf;
-    private String current_user;
+    private String currentUser;
+    private JDesktopPane desktopPane;
 
     private MainWindow() {
         super("Todo lists manager");
         this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        this.setSize(740, 800);
+        this.setSize(1400, 700);
         this.setLocationRelativeTo(null);
         this.setIconImage(new ImageIcon("src/main/resources/icon.png").getImage());
         this.setJMenuBar(this.createMenuBar());
@@ -42,6 +45,7 @@ public class MainWindow extends JFrame {
     private void refreshContentPane() {
         JPanel contentPane = (JPanel) this.getContentPane();
         contentPane.removeAll();
+
         contentPane.setLayout(new BorderLayout());
 
         contentPane.add(this.createToolBar(), BorderLayout.NORTH);
@@ -67,7 +71,7 @@ public class MainWindow extends JFrame {
         menuFile.addSeparator();
 
         JMenuItem openAllLists = new JMenuItem("Open All Todo Lists");
-        openAllLists.setIcon(new ImageIcon("src/main/resources/open-todo-lists.png"));
+        openAllLists.setAction(actOpenAllLists);
         menuFile.add(openAllLists);
 
         menuFile.addSeparator();
@@ -87,8 +91,7 @@ public class MainWindow extends JFrame {
         toolBar.add(actAddUser);
         JButton addList = new JButton(new ImageIcon("src/main/resources/add-todo-list.png"));
         toolBar.add(addList);
-        JButton openAllLists = new JButton(new ImageIcon("src/main/resources/open-todo-lists.png"));
-        toolBar.add(openAllLists);
+        toolBar.add(actOpenAllLists);
 
         return toolBar;
     }
@@ -100,7 +103,7 @@ public class MainWindow extends JFrame {
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
         splitPane.setLeftComponent(leftPanel);
         splitPane.setRightComponent(rightPanel);
-        splitPane.setResizeWeight(0.5);
+        splitPane.setResizeWeight(0.2);
 
         return splitPane;
     }
@@ -113,32 +116,38 @@ public class MainWindow extends JFrame {
 
         for (User user : this.userList.getUsers()) {
             JButton button = new JButton(user.getUser_name());
-            button.addActionListener(getLists);
+            button.addActionListener(actGetLists);
             panel.add(button);
-            // TODO : add Action to button
         }
 
         return new JScrollPane(panel);
     }
 
     private JScrollPane createListPanel() {
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        JButton openAll = new JButton("Open all lists");
-        openAll.setIcon(new ImageIcon("src/main/resources/open-todo-lists.png"));
-        panel.add(openAll);
-
         this.getLists();
 
         if (this.listList != null) {
+            JButton openAll = new JButton("Open all lists");
+            openAll.addActionListener(actOpenAllLists);
+            panel.add(openAll);
+
             for (ToDoList list : this.listList.getLists()) {
                 JButton button = new JButton(list.getLabel());
+                button.addActionListener(actOpenList);
                 panel.add(button);
-                // TODO : add Action to button
             }
         }
 
-        return new JScrollPane(panel);
+        desktopPane = new JDesktopPane();
+
+        splitPane.setLeftComponent(panel);
+        splitPane.setRightComponent(desktopPane);
+        splitPane.setResizeWeight(0.2);
+        return new JScrollPane(splitPane);
     }
 
     private void getUsers() {
@@ -162,8 +171,8 @@ public class MainWindow extends JFrame {
 
     private void getLists() {
         String endpoint = this.conf.getServer_url() + "/rest/ToDoLists?user_name=";
-        if (this.current_user != null) {
-            String userName = escapeLabelForAPI(this.current_user);
+        if (this.currentUser != null) {
+            String userName = escapeLabelForAPI(this.currentUser);
             endpoint += userName;
             System.out.println(endpoint);
             try(HttpClient httpClient = HttpClient.newHttpClient()) {
@@ -212,7 +221,7 @@ public class MainWindow extends JFrame {
                             .POST(HttpRequest.BodyPublishers.ofString(""))
                             .build();
                     httpClient.send(postRequest, HttpResponse.BodyHandlers.ofString());
-                    current_user = userName;
+                    currentUser = userName;
                     refreshContentPane();
                 } catch (IOException | InterruptedException | URISyntaxException e) {
                     throw new RuntimeException(e);
@@ -221,14 +230,90 @@ public class MainWindow extends JFrame {
         }
     };
 
-    private final AbstractAction getLists = new AbstractAction() {
+    private final AbstractAction actGetLists = new AbstractAction() {
         @Override
         public void actionPerformed(ActionEvent evt) {
             JButton userButton = (JButton) evt.getSource();
-            current_user = userButton.getText();
+            currentUser = userButton.getText();
             refreshContentPane();
+            ToDoListWindow.resetOpenFrameCount();
         }
     };
+
+    private final AbstractAction actOpenList = new AbstractAction() {
+        @Override
+        public void actionPerformed(ActionEvent evt) {
+            JButton listButton = (JButton) evt.getSource();
+            String chosenList = listButton.getText();
+            for(ToDoList list : listList.getLists()) {
+                if (chosenList.equals(list.getLabel())) {
+                    openListIfNotOpened(list);
+                }
+            }
+        }
+    };
+
+    private final AbstractAction actOpenAllLists = new AbstractAction() {
+        {
+            putValue(Action.NAME, "Open All Lists");
+            putValue(Action.SHORT_DESCRIPTION, "Open All Lists");
+            putValue(Action.SMALL_ICON, new ImageIcon("src/main/resources/open-todo-lists.png"));
+            putValue(Action.MNEMONIC_KEY, KeyEvent.VK_O);
+            putValue(Action.ACCELERATOR_KEY,
+                    KeyStroke.getKeyStroke(KeyEvent.VK_O, KeyEvent.CTRL_DOWN_MASK));
+        }
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            if (listList != null) {
+                for (ToDoList list : listList.getLists()) {
+                    openListIfNotOpened(list);
+                }
+            } else {
+                JOptionPane.showMessageDialog(
+                        null,
+                        "No User has been selected",
+                        "Error trying to open all lists",
+                    JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    };
+
+    private void openListIfNotOpened(ToDoList list) {
+        JInternalFrame[] openedLists = desktopPane.getAllFrames();
+        if (openedLists.length != 0) {
+            ArrayList<String> openedListNames = new ArrayList<>();
+            for (JInternalFrame frame : openedLists) {
+                openedListNames.add(frame.getTitle());
+            }
+            if (!openedListNames.contains(list.getLabel())) {
+                openList(list);
+            } else {
+                for (JInternalFrame frame : openedLists) {
+                    if (frame.getTitle().equals(list.getLabel())) {
+                        try {
+                            frame.setSelected(true);
+                        } catch (PropertyVetoException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                }
+            }
+        } else {
+            openList(list);
+        }
+    }
+
+    private void openList(ToDoList list) {
+        ToDoListWindow todo = new ToDoListWindow(list);
+        todo.setVisible(true);
+        desktopPane.add(todo);
+        todo.moveToFront();
+        try {
+            todo.setSelected(true);
+        } catch (PropertyVetoException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     private String escapeLabelForAPI(String label) {
         return URLEncoder.encode(label, StandardCharsets.UTF_8)
