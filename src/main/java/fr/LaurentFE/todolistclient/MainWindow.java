@@ -293,6 +293,13 @@ public class MainWindow extends JFrame {
                         "Add todo list",
                         JOptionPane.QUESTION_MESSAGE);
                 if (listName != null) {
+                    if (listNameAlreadyExists(listName, 0)){
+                        JOptionPane.showMessageDialog(null,
+                                "This user already has a list with this name",
+                                "Error trying to create new todo list",
+                                JOptionPane.ERROR_MESSAGE);
+                                return;
+                    }
                     String escapedUserName = ServerManager.escapeLabelForAPI(currentUser);
                     String escapedListName = ServerManager.escapeLabelForAPI(listName);
                     String endpoint = conf.getServer_url()
@@ -372,6 +379,15 @@ public class MainWindow extends JFrame {
         if (exitValue == JOptionPane.YES_OPTION) {
             dispose();
         }
+    }
+
+    public boolean listNameAlreadyExists(String listName, Integer disregardId) {
+        for (ToDoList todo : listList.getLists()) {
+            if (todo.getLabel().equals(listName) && !todo.getList_id().equals(disregardId)){
+                return true;
+            }
+        }
+        return false;
     }
 
     public static void main(String[] args) {
