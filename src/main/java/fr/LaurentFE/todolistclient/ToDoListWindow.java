@@ -188,6 +188,13 @@ public class ToDoListWindow extends JInternalFrame {
                     null,
                     toDoList.getLabel()).toString();
             if (newListName != null) {
+                if (mainWindowRef.listNameAlreadyExists(newListName, toDoList.getList_id())) {
+                    JOptionPane.showMessageDialog(null,
+                            "This user already has a list with this name",
+                            "Error trying to create new todo list",
+                            JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
                 String escapedUserName = ServerManager.escapeLabelForAPI(userName);
                 String escapedListName = ServerManager.escapeLabelForAPI(toDoList.getLabel());
                 String escapedNewListName = ServerManager.escapeLabelForAPI(newListName);
