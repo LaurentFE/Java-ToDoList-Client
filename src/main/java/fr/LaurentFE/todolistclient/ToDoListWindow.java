@@ -95,7 +95,8 @@ public class ToDoListWindow extends JInternalFrame {
         JLabel label = new JLabel(item.getLabel());
 
         JPanel editPanel = new JPanel();
-        JButton editItem = new JButton(new ImageIcon("src/main/resources/edit-item.png"));
+        JButton editItem = new JButton(actEditItemName);
+        editItem.setName(item.getLabel());
 
         listPanel.add(checkBox);
         listPanel.add(label);
@@ -145,7 +146,6 @@ public class ToDoListWindow extends JInternalFrame {
 
     private final AbstractAction actAddItem = new AbstractAction() {
         {
-            putValue(Action.NAME, "Add Item");
             putValue(Action.SHORT_DESCRIPTION, "Add Item");
             putValue(Action.SMALL_ICON, new ImageIcon("src/main/resources/add-item.png"));
         }
@@ -194,6 +194,48 @@ public class ToDoListWindow extends JInternalFrame {
                         + "&new_list_name=" + escapedNewListName;
                 ServerManager.sendPutRequest(endpoint);
                 toDoList.setLabel(newListName);
+                refreshToDoList();
+                refreshContentPane();
+                mainWindowRef.refreshListContentPane();
+            }
+        }
+    };
+
+    private final AbstractAction actEditItemName = new AbstractAction() {
+        {
+            putValue(Action.NAME, "Edit Item Name");
+            putValue(Action.SHORT_DESCRIPTION, "Edit Item Name");
+            putValue(Action.SMALL_ICON, new ImageIcon("src/main/resources/edit-item.png"));
+        }
+        @Override
+        public void actionPerformed(ActionEvent evt) {
+            JButton button = (JButton) evt.getSource();
+            String itemName = button.getName();
+            String newItemName = JOptionPane.showInputDialog(
+                    null,
+                    "Enter new item name",
+                    "Edit item name",
+                    JOptionPane.QUESTION_MESSAGE,
+                    null,
+                    null,
+                    itemName).toString();
+            if (newItemName != null) {
+                String escapedUserName = ServerManager.escapeLabelForAPI(userName);
+                String escapedListName = ServerManager.escapeLabelForAPI(toDoList.getLabel());
+                String escapedItemName = ServerManager.escapeLabelForAPI(itemName);
+                String escapedNewItemName = ServerManager.escapeLabelForAPI(newItemName);
+                String endpoint = ServerManager.getInstance()
+                        .getServerConfig().getServer_url() + "/rest/ListItemName?user_name=" + escapedUserName
+                        + "&list_name=" + escapedListName
+                        + "&item_name=" + escapedItemName
+                        + "&new_item_name=" + escapedNewItemName;
+                ServerManager.sendPutRequest(endpoint);
+                for (ListItem item : toDoList.getItems()) {
+                    if (item.getLabel().equals(itemName)) {
+                        item.setLabel(newItemName);
+                        break;
+                    }
+                }
                 refreshToDoList();
                 refreshContentPane();
                 mainWindowRef.refreshListContentPane();
