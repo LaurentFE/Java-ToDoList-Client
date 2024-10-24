@@ -54,7 +54,7 @@ public class MainWindow extends JFrame {
         contentPane.repaint();
     }
 
-    private void refreshListContentPane() {
+    public void refreshListContentPane() {
         listSplitPane.setLeftComponent(createListPane());
         listSplitPane.getLeftComponent().revalidate();
         listSplitPane.getLeftComponent().repaint();
@@ -334,7 +334,7 @@ public class MainWindow extends JFrame {
     }
 
     private void openList(ToDoList list) {
-        ToDoListWindow todo = new ToDoListWindow(list, currentUser);
+        ToDoListWindow todo = new ToDoListWindow(this, list, currentUser);
         todo.setVisible(true);
         desktopPane.add(todo);
         todo.moveToFront();
