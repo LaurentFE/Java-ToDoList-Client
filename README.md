@@ -25,8 +25,8 @@ When a user is selected, in the middle panel will appear all known todo lists us
 To do so, click on the "Add Todo List" button in the toolbar, the "File>Add Todo List" item in the menu bar, or press 
 `CTRL+T`. 
 
-You can also open all of this user's todo lists by using the "Open All Lists" button in the toolbar, the "File>Open All Lists" item in the menu bar, the 
-button in the displayed list of todo lists, or press `CTRL+O`.
+You can also open all of this user's todo lists by using the "Open All Lists" button in the toolbar, the "File>Open All 
+Lists" item in the menu bar, the button in the displayed list of todo lists, or press `CTRL+O`.
 
 Opening one (or many) todo lists will show the todo list and its items in the bigger, rightmost panel. 
 
@@ -35,6 +35,14 @@ In this panel, the toolbar provides buttons for editing the list's name, or add 
 Each item is prefixed with a checkbox, to check or uncheck any item of the list.
 
 On the far end of each item is a button to edit the item's label.
+
+This application only encodes the API requests in UTF-8 and doesn't handle all special characters.
+
+This application also does not enforce any check on the user's inputs.
+
+Please mind that on the default SQL scripts provided for the server in the server repo, all VARCHAR columns are limited
+to 45 chars, and this client application doesn't check that you don't exceed this length.
+
 
 ## How
 
