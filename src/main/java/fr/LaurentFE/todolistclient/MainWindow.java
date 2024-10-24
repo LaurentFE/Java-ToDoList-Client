@@ -60,18 +60,15 @@ public class MainWindow extends JFrame {
         JMenu menuFile = new JMenu("File");
         menuFile.setMnemonic('F');
 
-        JMenuItem addUser = new JMenuItem("Add User");
-        addUser.setAction(actAddUser);
+        JMenuItem addUser = new JMenuItem(actAddUser);
         menuFile.add(addUser);
 
-        JMenuItem addToDoList = new JMenuItem("Add Todo List");
-        addToDoList.setIcon(new ImageIcon("src/main/resources/add-todo-list.png"));
+        JMenuItem addToDoList = new JMenuItem(actAddNewToDoList);
         menuFile.add(addToDoList);
 
         menuFile.addSeparator();
 
-        JMenuItem openAllLists = new JMenuItem("Open All Todo Lists");
-        openAllLists.setAction(actOpenAllLists);
+        JMenuItem openAllLists = new JMenuItem(actOpenAllLists);
         menuFile.add(openAllLists);
 
         menuFile.addSeparator();
@@ -89,8 +86,7 @@ public class MainWindow extends JFrame {
         toolBar.setFloatable(false);
 
         toolBar.add(actAddUser);
-        JButton addList = new JButton(new ImageIcon("src/main/resources/add-todo-list.png"));
-        toolBar.add(addList);
+        toolBar.add(actAddNewToDoList);
         toolBar.add(actOpenAllLists);
 
         return toolBar;
@@ -103,7 +99,7 @@ public class MainWindow extends JFrame {
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
         splitPane.setLeftComponent(leftPanel);
         splitPane.setRightComponent(rightPanel);
-        splitPane.setResizeWeight(0.2);
+        splitPane.setResizeWeight(0);
 
         return splitPane;
     }
@@ -146,7 +142,7 @@ public class MainWindow extends JFrame {
 
         splitPane.setLeftComponent(panel);
         splitPane.setRightComponent(desktopPane);
-        splitPane.setResizeWeight(0.2);
+        splitPane.setResizeWeight(0);
         return new JScrollPane(splitPane);
     }
 
@@ -214,18 +210,9 @@ public class MainWindow extends JFrame {
             if (userName != null) {
                 String escapedUserName = escapeLabelForAPI(userName);
                 String endpoint = conf.getServer_url() + "/rest/User?user_name=" + escapedUserName;
-                System.out.println(endpoint);
-                try (HttpClient httpClient = HttpClient.newHttpClient()) {
-                    HttpRequest postRequest = HttpRequest.newBuilder()
-                            .uri(new URI(endpoint))
-                            .POST(HttpRequest.BodyPublishers.ofString(""))
-                            .build();
-                    httpClient.send(postRequest, HttpResponse.BodyHandlers.ofString());
-                    currentUser = userName;
-                    refreshContentPane();
-                } catch (IOException | InterruptedException | URISyntaxException e) {
-                    throw new RuntimeException(e);
-                }
+                sendPostRequest(endpoint);
+                currentUser = userName;
+                refreshContentPane();
             }
         }
     };
@@ -277,6 +264,54 @@ public class MainWindow extends JFrame {
             }
         }
     };
+
+    private final AbstractAction actAddNewToDoList = new AbstractAction() {
+        {
+            putValue(Action.NAME, "Add Todo List");
+            putValue(Action.SHORT_DESCRIPTION, "Add Todo List");
+            putValue(Action.SMALL_ICON, new ImageIcon("src/main/resources/add-todo-list.png"));
+            putValue(Action.MNEMONIC_KEY, KeyEvent.VK_T);
+            putValue(Action.ACCELERATOR_KEY,
+                    KeyStroke.getKeyStroke(KeyEvent.VK_T, KeyEvent.CTRL_DOWN_MASK));
+        }
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            if (currentUser != null) {
+                String listName = JOptionPane.showInputDialog(
+                        null,
+                        "Enter new todo list name",
+                        "Add todo list",
+                        JOptionPane.QUESTION_MESSAGE);
+                if (listName != null) {
+                    String escapedUserName = escapeLabelForAPI(currentUser);
+                    String escapedListName = escapeLabelForAPI(listName);
+                    String endpoint = conf.getServer_url()
+                            + "/rest/ToDoList?user_name=" + escapedUserName
+                            + "&list_name=" + escapedListName;
+                    System.out.println(endpoint);
+                    sendPostRequest(endpoint);
+                    refreshContentPane();
+                }
+            } else {
+                JOptionPane.showMessageDialog(null,
+                        "No User has been selected",
+                        "Error trying to create new todo list",
+                        JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    };
+
+    private void sendPostRequest(String endpoint) {
+        try (HttpClient httpClient = HttpClient.newHttpClient()) {
+            HttpRequest postRequest = HttpRequest.newBuilder()
+                    .uri(new URI(endpoint))
+                    .POST(HttpRequest.BodyPublishers.ofString(""))
+                    .build();
+            httpClient.send(postRequest, HttpResponse.BodyHandlers.ofString());
+        } catch (IOException | InterruptedException | URISyntaxException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     private void openListIfNotOpened(ToDoList list) {
         JInternalFrame[] openedLists = desktopPane.getAllFrames();
@@ -334,11 +369,5 @@ public class MainWindow extends JFrame {
 
         MainWindow mainWindow = new MainWindow();
         mainWindow.setVisible(true);
-
-        /*
-            Temporary : this will be called upon selecting a todolist for a given user
-         */
-        //ToDoListWindow todo = new ToDoListWindow();
-        //todo.setVisible(true);
     }
 }
