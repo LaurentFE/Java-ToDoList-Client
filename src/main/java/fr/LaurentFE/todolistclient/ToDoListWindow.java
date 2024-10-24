@@ -166,6 +166,7 @@ public class ToDoListWindow extends JInternalFrame {
                 ServerManager.sendPostRequest(endpoint);
                 refreshToDoList();
                 refreshContentPane();
+                mainWindowRef.refreshListContentPane();
             }
         }
     };
