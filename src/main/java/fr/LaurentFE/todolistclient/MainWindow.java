@@ -291,6 +291,7 @@ public class MainWindow extends JFrame {
                     System.out.println(endpoint);
                     sendPostRequest(endpoint);
                     refreshContentPane();
+                    openListIfNotOpened(new ToDoList(0, listName, null));
                 }
             } else {
                 JOptionPane.showMessageDialog(null,
