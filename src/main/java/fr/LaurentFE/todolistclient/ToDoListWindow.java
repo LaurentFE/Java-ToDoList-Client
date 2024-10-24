@@ -17,9 +17,11 @@ public class ToDoListWindow extends JInternalFrame {
     static final int baseHeight = 70;
     static final int heightIncrement = 50;
     private final String userName;
+    private final MainWindow mainWindowRef;
 
-    public ToDoListWindow(ToDoList list, String userName) {
+    public ToDoListWindow(MainWindow mainWindowRef, ToDoList list, String userName) {
         super(list.getLabel(), true, true, false, false);
+        this.mainWindowRef = mainWindowRef;
         openFrameCount++;
         toDoList = list;
         this.userName = userName;
@@ -41,6 +43,8 @@ public class ToDoListWindow extends JInternalFrame {
         JPanel contentPane = (JPanel) this.getContentPane();
         contentPane.removeAll();
 
+        this.setTitle(toDoList.getLabel());
+
         contentPane.setLayout(new BorderLayout());
 
         if (toDoList.getItems() != null) {
@@ -59,8 +63,7 @@ public class ToDoListWindow extends JInternalFrame {
         JToolBar toolBar = new JToolBar();
         toolBar.setFloatable(false);
 
-        JButton editListName = new JButton(new ImageIcon("src/main/resources/edit-list.png"));
-        toolBar.add(editListName);
+        toolBar.add(actEditListName);
         toolBar.add(actAddItem);
 
         return toolBar;
@@ -144,4 +147,34 @@ public class ToDoListWindow extends JInternalFrame {
             }
         }
     };
+
+    private final AbstractAction actEditListName = new AbstractAction() {
+        {
+            putValue(Action.NAME, "Edit List");
+            putValue(Action.SHORT_DESCRIPTION, "Edit List");
+            putValue(Action.SMALL_ICON, new ImageIcon("src/main/resources/edit-list.png"));
+        }
+        @Override
+        public void actionPerformed(ActionEvent evt) {
+            String newListName = JOptionPane.showInputDialog(
+                    null,
+                    "Enter new list name",
+                    "Edit list name",
+                    JOptionPane.QUESTION_MESSAGE);
+            if (newListName != null) {
+                String escapedUserName = ServerManager.escapeLabelForAPI(userName);
+                String escapedListName = ServerManager.escapeLabelForAPI(toDoList.getLabel());
+                String escapedNewListName = ServerManager.escapeLabelForAPI(newListName);
+                String endpoint = ServerManager.getInstance()
+                        .getServerConfig().getServer_url() + "/rest/ToDoListName?user_name=" + escapedUserName
+                        + "&list_name=" + escapedListName
+                        + "&new_list_name=" + escapedNewListName;
+                ServerManager.sendPutRequest(endpoint);
+                toDoList.setLabel(newListName);
+                refreshToDoList();
+                refreshContentPane();
+                mainWindowRef.refreshListContentPane();
+            }
+        }
+    } ;
 }

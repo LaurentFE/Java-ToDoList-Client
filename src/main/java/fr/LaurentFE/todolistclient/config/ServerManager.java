@@ -87,4 +87,16 @@ public class ServerManager {
             throw new RuntimeException(e);
         }
     }
+
+    public static void sendPutRequest(String endpoint) {
+        try (HttpClient httpClient = HttpClient.newHttpClient()) {
+            HttpRequest postRequest = HttpRequest.newBuilder()
+                    .uri(new URI(endpoint))
+                    .PUT(HttpRequest.BodyPublishers.ofString(""))
+                    .build();
+            httpClient.send(postRequest, HttpResponse.BodyHandlers.ofString());
+        } catch (IOException | InterruptedException | URISyntaxException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }
