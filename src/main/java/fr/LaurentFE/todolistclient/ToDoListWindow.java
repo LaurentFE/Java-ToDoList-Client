@@ -1,23 +1,35 @@
 package fr.LaurentFE.todolistclient;
 
 import javax.swing.*;
+import javax.swing.event.InternalFrameAdapter;
+import javax.swing.event.InternalFrameEvent;
 import java.awt.*;
 
-public class ToDoListWindow extends JFrame {
-    /*
-        Will accept a ToDoList object
-     */
-    public ToDoListWindow() {
-        super("Todo list name");
-        this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        this.setSize(400, 300);
-        /*
-            center of the screen, + offset for every todolist open, to cascade properly
-         */
-        this.setLocationRelativeTo(null);
+public class ToDoListWindow extends JInternalFrame {
 
-        this.setIconImage(new ImageIcon("src/main/resources/todolist.png").getImage());
+    private final ToDoList toDoList;
+    static int openFrameCount = 0;
+    static final int xOffset = 30, yOffset = 30;
+
+    public ToDoListWindow(ToDoList list) {
+        super(list.getLabel(), true, true, false, false);
+        openFrameCount++;
+
+        this.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+        this.addInternalFrameListener(new InternalFrameAdapter() {
+            public void internalFrameClosing(InternalFrameEvent e) {
+                openFrameCount--;
+                dispose();
+            }
+        });
+        this.setSize(400, 300);
+
+        this.setLocation(xOffset * openFrameCount, yOffset * openFrameCount);
+
+        //this.setIconImage(new ImageIcon("src/main/resources/todolist.png").getImage());
         this.setJMenuBar(this.createMenuBar());
+
+        toDoList = list;
 
         JPanel contentPane = (JPanel) this.getContentPane();
         contentPane.setLayout(new BorderLayout());
@@ -64,29 +76,25 @@ public class ToDoListWindow extends JFrame {
         return toolBar;
     }
 
-    private JPanel createItemsDisplay() {
+    private JScrollPane createItemsDisplay() {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
 
-        /*
-            For each list item
-         */
-        panel.add(createListItemDisplay());
-        panel.add(createListItemDisplay());
-        panel.add(createListItemDisplay());
-        panel.add(createListItemDisplay());
+        for (ListItem item : toDoList.getItems()) {
+            panel.add(createListItemDisplay(item));
+        }
 
-        return panel;
+        return new JScrollPane(panel);
     }
 
-    private JPanel createListItemDisplay() {
+    private JPanel createListItemDisplay(ListItem item) {
         JPanel panel = new JPanel();
         panel.setLayout(new BorderLayout());
 
         JPanel listPanel = new JPanel();
         listPanel.setLayout(new BoxLayout(listPanel, BoxLayout.X_AXIS));
-        JCheckBox checkBox = new JCheckBox();
-        JLabel label = new JLabel("item_name");
+        JCheckBox checkBox = new JCheckBox("",item.isChecked());
+        JLabel label = new JLabel(item.getLabel());
 
         JPanel editPanel = new JPanel();
         JButton editItem = new JButton(new ImageIcon("src/main/resources/edit-item.png"));
@@ -99,5 +107,9 @@ public class ToDoListWindow extends JFrame {
         panel.add(editPanel, BorderLayout.EAST);
 
         return panel;
+    }
+
+    public static void resetOpenFrameCount() {
+        openFrameCount = 0;
     }
 }
