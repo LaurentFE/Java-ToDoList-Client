@@ -1,5 +1,10 @@
 # To Do List - Client
 
+The main branch of the project is made to be interfaced with the Java ToDo List Server.
+
+If you desire to use the newer ToDo List Server, made on the Spring Boot framework, please check the appropriate branch
+of the repository : `compatible-with-Spring-Boot-server-version`.
+
 ## Usage
 
 Configure the API Server  address in src/main/resources/target-server.json to allow this client to send REST API calls 
