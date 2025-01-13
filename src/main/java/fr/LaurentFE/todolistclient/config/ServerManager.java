@@ -6,11 +6,9 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
 
 public class ServerManager {
@@ -52,23 +50,15 @@ public class ServerManager {
         return serverConfig;
     }
 
-    public static String escapeLabelForAPI(String label) {
-        return URLEncoder.encode(label, StandardCharsets.UTF_8)
-                .replace("+", "%20")
-                .replace("%21", "!")
-                .replace("%27", "'")
-                .replace("%28", "(")
-                .replace("%29", ")")
-                .replace("%7E", "~");
-    }
-
-    public static void sendPostRequest(String endpoint) {
+    public static String sendPostRequest(String endpoint, String requestBody) {
         try (HttpClient httpClient = HttpClient.newHttpClient()) {
             HttpRequest postRequest = HttpRequest.newBuilder()
                     .uri(new URI(endpoint))
-                    .POST(HttpRequest.BodyPublishers.ofString(""))
+                    .method("POST", HttpRequest.BodyPublishers.ofString(requestBody))
+                    .header("Content-Type", "application/json")
                     .build();
-            httpClient.send(postRequest, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = httpClient.send(postRequest, HttpResponse.BodyHandlers.ofString());
+            return response.body();
         } catch (IOException | InterruptedException | URISyntaxException e) {
             throw new RuntimeException(e);
         }
@@ -88,11 +78,12 @@ public class ServerManager {
         }
     }
 
-    public static void sendPutRequest(String endpoint) {
+    public static void sendPatchRequest(String endpoint, String requestBody) {
         try (HttpClient httpClient = HttpClient.newHttpClient()) {
             HttpRequest postRequest = HttpRequest.newBuilder()
                     .uri(new URI(endpoint))
-                    .PUT(HttpRequest.BodyPublishers.ofString(""))
+                    .method("PATCH", HttpRequest.BodyPublishers.ofString(requestBody))
+                    .header("Content-Type", "application/json")
                     .build();
             httpClient.send(postRequest, HttpResponse.BodyHandlers.ofString());
         } catch (IOException | InterruptedException | URISyntaxException e) {

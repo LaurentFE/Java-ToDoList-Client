@@ -1,14 +1,18 @@
 package fr.LaurentFE.todolistclient;
 
 public class ListItem {
-    private final Integer item_id;
+    private final Integer itemId;
     private String label;
     private final Boolean checked;
 
-    public ListItem(Integer item_id, String label, Boolean checked) {
-        this.item_id = item_id;
+    public ListItem(Integer itemId, String label, Boolean checked) {
+        this.itemId = itemId;
         this.label = label;
         this.checked = checked;
+    }
+
+    public Integer getItemId() {
+        return itemId;
     }
 
     public String getLabel() {

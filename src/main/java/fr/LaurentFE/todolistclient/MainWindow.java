@@ -39,6 +39,8 @@ public class MainWindow extends JFrame {
         ServerManager.getInstance().loadServerConfig();
         conf = ServerManager.getInstance().getServerConfig();
 
+        this.userList = new UserList(new ArrayList<>());
+
         refreshContentPane();
     }
 
@@ -117,15 +119,17 @@ public class MainWindow extends JFrame {
         c.anchor = GridBagConstraints.PAGE_START;
 
         getUsers();
-        for (int i=0; i<this.userList.getUsers().size(); i++) {
-            JButton button = new JButton(this.userList.getUsers().get(i).getUser_name());
-            button.addActionListener(actGetLists);
-            c.gridx = 0;
-            c.gridy = i+1;
-            if (i==this.userList.getUsers().size()-1) {
-                c.weighty = 1;
+        if (this.userList != null) {
+            for (int i = 0; i < this.userList.getUsers().size(); i++) {
+                JButton button = new JButton(this.userList.getUsers().get(i).getUserName());
+                button.addActionListener(actGetLists);
+                c.gridx = 0;
+                c.gridy = i + 1;
+                if (i == this.userList.getUsers().size() - 1) {
+                    c.weighty = 1;
+                }
+                panel.add(button, c);
             }
-            panel.add(button, c);
         }
 
         return new JScrollPane(panel);
@@ -175,10 +179,20 @@ public class MainWindow extends JFrame {
         return panel;
     }
 
+    public int getUserId(String userName) {
+        int userId=-1;
+        for (User user: userList.getUsers()) {
+            if (user.getUserName().equals(userName)) {
+                userId = user.getUserId();
+            }
+        }
+        return userId;
+    }
+
     private void getUsers() {
-        String endpoint = this.conf.getServer_url() + "/rest/Users";
+        String endpoint = this.conf.getServer_url() + "rest/users";
         String response = ServerManager.sendGetRequest(endpoint);
-        if(response.contains("user_id")) {
+        if(response.contains("userId")) {
             Gson gson = new Gson();
             String parsableJson = "{ \"users\":" + response + "}";
             this.userList = gson.fromJson(parsableJson, UserList.class);
@@ -186,12 +200,11 @@ public class MainWindow extends JFrame {
     }
 
     private void getLists() {
-        String endpoint = this.conf.getServer_url() + "/rest/ToDoLists?user_name=";
+        int currentUserId = getUserId(currentUser);
+        String endpoint = this.conf.getServer_url() + "rest/toDoLists?userId="+currentUserId;
         if (this.currentUser != null) {
-            String escapedUserName = ServerManager.escapeLabelForAPI(this.currentUser);
-            endpoint += escapedUserName;
             String response = ServerManager.sendGetRequest(endpoint);
-            if(response.contains("list_id")) {
+            if(response.contains("listId")) {
                 Gson gson = new Gson();
                 String parsableJson = "{ \"lists\":" + response + "}";
                 this.listList = gson.fromJson(parsableJson, ToDoListList.class);
@@ -218,9 +231,23 @@ public class MainWindow extends JFrame {
                     "Add user",
                     JOptionPane.QUESTION_MESSAGE);
             if (userName != null) {
-                String escapedUserName = ServerManager.escapeLabelForAPI(userName);
-                String endpoint = conf.getServer_url() + "/rest/User?user_name=" + escapedUserName;
-                ServerManager.sendPostRequest(endpoint);
+                userName = userName.replace("\"","");
+                if (userList!= null && userNameAlreadyExists(userName)){
+                    JOptionPane.showMessageDialog(null,
+                            "A user with this name already exists",
+                            "Error trying to create new user",
+                            JOptionPane.ERROR_MESSAGE);
+                    return;
+                } else if (userName.isEmpty()) {
+                    JOptionPane.showMessageDialog(null,
+                            "A user name must be composed of at least one character, different from the character \".",
+                            "Error trying to create new user",
+                            JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                String endpoint = conf.getServer_url() + "rest/users";
+                String requestBody = "{ \"userName\": \""+userName+"\" }";
+                ServerManager.sendPostRequest(endpoint, requestBody);
                 currentUser = userName;
                 refreshContentPane();
             }
@@ -293,21 +320,30 @@ public class MainWindow extends JFrame {
                         "Add todo list",
                         JOptionPane.QUESTION_MESSAGE);
                 if (listName != null) {
-                    if (listNameAlreadyExists(listName, 0)){
+                    listName = listName.replace("\"", "");
+                    if (listList!= null && listNameAlreadyExists(listName, 0)){
                         JOptionPane.showMessageDialog(null,
                                 "This user already has a list with this name",
                                 "Error trying to create new todo list",
                                 JOptionPane.ERROR_MESSAGE);
                                 return;
+                    } else if (listName.isEmpty()) {
+                        JOptionPane.showMessageDialog(null,
+                                "A list name must be composed of at least one character, different from the " +
+                                        "character \".",
+                                "Error trying to create new todo list",
+                                JOptionPane.ERROR_MESSAGE);
+                        return;
                     }
-                    String escapedUserName = ServerManager.escapeLabelForAPI(currentUser);
-                    String escapedListName = ServerManager.escapeLabelForAPI(listName);
+                    int userId = getUserId(currentUser);
                     String endpoint = conf.getServer_url()
-                            + "/rest/ToDoList?user_name=" + escapedUserName
-                            + "&list_name=" + escapedListName;
-                    ServerManager.sendPostRequest(endpoint);
+                            + "rest/toDoLists";
+                    String requestBody = "{ \"userId\": " + userId + ", \"label\": \"" + listName + "\" }";
+                    String response = ServerManager.sendPostRequest(endpoint, requestBody);
                     refreshListContentPane();
-                    openListIfNotOpened(new ToDoList(0, listName, null));
+                    Gson gson = new Gson();
+                    ToDoList toDoList = gson.fromJson(response, ToDoList.class);
+                    openListIfNotOpened(toDoList);
                 }
             } else {
                 JOptionPane.showMessageDialog(null,
@@ -381,9 +417,18 @@ public class MainWindow extends JFrame {
         }
     }
 
+    public boolean userNameAlreadyExists(String userName) {
+        for (User user : userList.getUsers()) {
+            if (user.getUserName().equals(userName)){
+                return true;
+            }
+        }
+        return false;
+    }
+
     public boolean listNameAlreadyExists(String listName, Integer disregardId) {
         for (ToDoList todo : listList.getLists()) {
-            if (todo.getLabel().equals(listName) && !todo.getList_id().equals(disregardId)){
+            if (todo.getLabel().equals(listName) && !todo.getListId().equals(disregardId)){
                 return true;
             }
         }

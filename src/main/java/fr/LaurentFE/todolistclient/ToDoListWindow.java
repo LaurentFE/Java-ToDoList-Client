@@ -110,29 +110,26 @@ public class ToDoListWindow extends JInternalFrame {
 
     void checkStateChanged(ItemEvent e) {
         JCheckBox checkBox = (JCheckBox) e.getSource();
-        String escapedUserName = ServerManager.escapeLabelForAPI(userName);
-        String escapedListName = ServerManager.escapeLabelForAPI(toDoList.getLabel());
-        String escapedItemName = ServerManager.escapeLabelForAPI(checkBox.getName());
-        String isChecked = checkBox.isSelected() + "";
-
+        int itemId = -1;
+        for (ListItem item: toDoList.getItems()) {
+            if (item.getLabel().equals(checkBox.getName())) {
+                itemId = item.getItemId();
+            }
+        }
         String endpoint = ServerManager.getInstance()
-                .getServerConfig().getServer_url() + "/rest/ListItemCheck?user_name=" + escapedUserName
-                + "&list_name=" + escapedListName
-                + "&item_name=" + escapedItemName
-                + "&is_checked=" + isChecked;
+                .getServerConfig().getServer_url() + "rest/items/"+itemId;
 
-        ServerManager.sendPutRequest(endpoint);
+        String requestBody = "{ \"label\": \"" + checkBox.getName() + "\"," +
+                " \"checked\": " + checkBox.isSelected() + " }";
+        ServerManager.sendPatchRequest(endpoint, requestBody);
         refreshToDoList();
         refreshContentPane();
         mainWindowRef.refreshListContentPane();
     }
 
     private void refreshToDoList() {
-        String escapedUserName = ServerManager.escapeLabelForAPI(userName);
-        String escapedListName = ServerManager.escapeLabelForAPI(toDoList.getLabel());
         String endpoint = ServerManager.getInstance()
-                .getServerConfig().getServer_url() + "/rest/ToDoList?user_name=" + escapedUserName
-                + "&list_name=" + escapedListName;
+                .getServerConfig().getServer_url() + "rest/toDoLists/"+toDoList.getListId();
 
         String response = ServerManager.sendGetRequest(endpoint);
         Gson gson = new Gson();
@@ -156,14 +153,21 @@ public class ToDoListWindow extends JInternalFrame {
                     "Add item",
                     JOptionPane.QUESTION_MESSAGE);
             if (itemName != null) {
-                String escapedUserName = ServerManager.escapeLabelForAPI(userName);
-                String escapedListName = ServerManager.escapeLabelForAPI(toDoList.getLabel());
-                String escapedItemName = ServerManager.escapeLabelForAPI(itemName);
+                itemName = itemName.replace("\"", "");
+                if (itemName.isEmpty()) {
+                    JOptionPane.showMessageDialog(null,
+                            "An item name must be composed of at least one character, different from the " +
+                                    "character \".",
+                            "Error trying to create new item",
+                            JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
                 String endpoint = ServerManager.getInstance()
-                        .getServerConfig().getServer_url() + "/rest/ListItem?user_name=" + escapedUserName
-                        + "&list_name=" + escapedListName
-                        + "&item_name=" + escapedItemName;
-                ServerManager.sendPostRequest(endpoint);
+                        .getServerConfig().getServer_url() + "rest/items";
+                String requestBody = "{ \"listId\": " + toDoList.getListId() + "," +
+                        "\"label\": \"" + itemName + "\"," +
+                        "\"checked\": false }";
+                ServerManager.sendPostRequest(endpoint, requestBody);
                 refreshToDoList();
                 refreshContentPane();
                 mainWindowRef.refreshListContentPane();
@@ -179,30 +183,36 @@ public class ToDoListWindow extends JInternalFrame {
         }
         @Override
         public void actionPerformed(ActionEvent evt) {
-            String newListName = JOptionPane.showInputDialog(
+            Object option = JOptionPane.showInputDialog(
                     null,
                     "Enter new list name",
                     "Edit list name",
                     JOptionPane.QUESTION_MESSAGE,
                     null,
                     null,
-                    toDoList.getLabel()).toString();
-            if (newListName != null) {
-                if (mainWindowRef.listNameAlreadyExists(newListName, toDoList.getList_id())) {
+                    toDoList.getLabel());
+            if (option != null) {
+                String newListName = option.toString().replace("\"", "");
+                if (mainWindowRef.listNameAlreadyExists(newListName, toDoList.getListId())) {
                     JOptionPane.showMessageDialog(null,
                             "This user already has a list with this name",
                             "Error trying to create new todo list",
                             JOptionPane.ERROR_MESSAGE);
                     return;
+                } else if (newListName.isEmpty()) {
+                    JOptionPane.showMessageDialog(null,
+                            "A list name must be composed of at least one character, different from the " +
+                                    "character \".",
+                            "Error trying to create new todo list",
+                            JOptionPane.ERROR_MESSAGE);
+                    return;
                 }
-                String escapedUserName = ServerManager.escapeLabelForAPI(userName);
-                String escapedListName = ServerManager.escapeLabelForAPI(toDoList.getLabel());
-                String escapedNewListName = ServerManager.escapeLabelForAPI(newListName);
                 String endpoint = ServerManager.getInstance()
-                        .getServerConfig().getServer_url() + "/rest/ToDoListName?user_name=" + escapedUserName
-                        + "&list_name=" + escapedListName
-                        + "&new_list_name=" + escapedNewListName;
-                ServerManager.sendPutRequest(endpoint);
+                        .getServerConfig().getServer_url() + "rest/toDoLists/"+toDoList.getListId();
+                String requestBody = "{ \"userId\": " + mainWindowRef.getUserId(userName) + "," +
+                        "\"label\": \"" + newListName + "\" }";
+                System.out.println(requestBody);
+                ServerManager.sendPatchRequest(endpoint, requestBody);
                 toDoList.setLabel(newListName);
                 refreshToDoList();
                 refreshContentPane();
@@ -221,25 +231,37 @@ public class ToDoListWindow extends JInternalFrame {
         public void actionPerformed(ActionEvent evt) {
             JButton button = (JButton) evt.getSource();
             String itemName = button.getName();
-            String newItemName = JOptionPane.showInputDialog(
+            Object option = JOptionPane.showInputDialog(
                     null,
                     "Enter new item name",
                     "Edit item name",
                     JOptionPane.QUESTION_MESSAGE,
                     null,
                     null,
-                    itemName).toString();
-            if (newItemName != null) {
-                String escapedUserName = ServerManager.escapeLabelForAPI(userName);
-                String escapedListName = ServerManager.escapeLabelForAPI(toDoList.getLabel());
-                String escapedItemName = ServerManager.escapeLabelForAPI(itemName);
-                String escapedNewItemName = ServerManager.escapeLabelForAPI(newItemName);
+                    itemName);
+            if (option != null) {
+                String newItemName = option.toString().replace("\"", "");
+                 if (newItemName.isEmpty()) {
+                    JOptionPane.showMessageDialog(null,
+                            "A list name must be composed of at least one character, different from the " +
+                                    "character \".",
+                            "Error trying to edit a todo list name",
+                            JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                boolean checked = false;
+                int itemId = -1;
+                for (ListItem item: toDoList.getItems()) {
+                    if (itemName.equals(item.getLabel())) {
+                        checked = item.isChecked();
+                        itemId = item.getItemId();
+                    }
+                }
                 String endpoint = ServerManager.getInstance()
-                        .getServerConfig().getServer_url() + "/rest/ListItemName?user_name=" + escapedUserName
-                        + "&list_name=" + escapedListName
-                        + "&item_name=" + escapedItemName
-                        + "&new_item_name=" + escapedNewItemName;
-                ServerManager.sendPutRequest(endpoint);
+                        .getServerConfig().getServer_url() + "rest/items/" + itemId;
+                String requestBody = "{ \"label\": \"" + newItemName + "\"," +
+                        "\"checked\": " + checked + " }";
+                ServerManager.sendPatchRequest(endpoint, requestBody);
                 for (ListItem item : toDoList.getItems()) {
                     if (item.getLabel().equals(itemName)) {
                         item.setLabel(newItemName);

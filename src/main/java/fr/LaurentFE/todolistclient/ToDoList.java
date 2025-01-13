@@ -3,18 +3,18 @@ package fr.LaurentFE.todolistclient;
 import java.util.ArrayList;
 
 public class ToDoList {
-    private final Integer list_id;
+    private final Integer listId;
     private String label;
     private final ArrayList<ListItem> items;
 
-    public ToDoList(Integer list_id, String label, ArrayList<ListItem> items) {
-        this.list_id = list_id;
+    public ToDoList(Integer listId, String label, ArrayList<ListItem> items) {
+        this.listId = listId;
         this.label = label;
         this.items = items;
     }
 
-    public Integer getList_id() {
-        return list_id;
+    public Integer getListId() {
+        return listId;
     }
 
     public String getLabel() {

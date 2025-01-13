@@ -1,23 +1,19 @@
 package fr.LaurentFE.todolistclient;
 
 public class User {
-    private final Integer user_id;
-    private String user_name;
+    private final Integer userId;
+    private final String userName;
 
     public User(Integer user_id, String user_name) {
-        this.user_id = user_id;
-        this.user_name = user_name;
+        this.userId = user_id;
+        this.userName = user_name;
     }
 
-    public Integer getUser_id() {
-        return user_id;
+    public Integer getUserId() {
+        return userId;
     }
 
-    public String getUser_name() {
-        return user_name;
-    }
-
-    public void setUser_name(String user_name) {
-        this.user_name = user_name;
+    public String getUserName() {
+        return userName;
     }
 }
