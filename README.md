@@ -1,9 +1,14 @@
 # To Do List - Client
 
+This branch of the project is made to be interfaced with the newer ToDo List Server, made on the Spring Boot framework.
+
+The new server respects much more the REST principles, and thus the API interface changed, which in turn required a
+change in how the client calls the API.
+
 ## Usage
 
-Configure the API Server  address in src/main/resources/target-server.json to allow this client to send REST API calls 
-to the java-ToDoList-Server (https://github.com/LaurentFE/java-ToDoList-Server) set up on your web server.
+Configure the API Server address in src/main/resources/target-server.json to allow this client to send REST API calls 
+to the java-ToDoList-Server (https://github.com/LaurentFE/java-Spring-Boot-ToDoList-Server).
 
 Use Maven to compile & build.
 
@@ -11,8 +16,8 @@ Launch the resulting Java application to open the GUI.
 
 ## What
 
-This Java application provides the user with a GUI to interface with the Java To Do List Server
-(https://github.com/LaurentFE/java-ToDoList-Server) managing the MySQL DB keeping the todo lists stored.
+This Java application provides the user with a GUI to interface with the Java (Spring Boot) To Do List Server
+(https://github.com/LaurentFE/java-Spring-Boot-ToDoList-Server) managing the MySQL DB keeping the todo lists stored.
 
 On the leftmost panel are displayed the current known users of the system. You can select a user by clicking on the 
 corresponding button, or create a new one. 
@@ -42,6 +47,9 @@ This application also does not enforce any check on the user's inputs.
 
 Please mind that on the default SQL scripts provided for the server in the server repo, all VARCHAR columns are limited
 to 45 chars, and this client application doesn't check that you don't exceed this length.
+
+Please also mind that the default MySQL database configuration makes queries case-insensitive, and prevents you from
+inserting for instance two users named "Gerberte" and "gerberte", sensing a conflict.
 
 
 ## How
