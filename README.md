@@ -13,6 +13,7 @@ to the java-ToDoList-Server (https://github.com/LaurentFE/java-Spring-Boot-ToDoL
 Use Maven to compile & build.
 
 Launch the resulting Java application to open the GUI.
+GUI will not start (or rather, will crash with a Runtime Error, crude and unrefined) if it fails to connect properly to the ToDoList-Server.
 
 ## What
 
