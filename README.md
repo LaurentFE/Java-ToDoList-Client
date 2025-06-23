@@ -7,12 +7,13 @@ of the repository : `compatible-with-Spring-Boot-server-version`.
 
 ## Usage
 
-Configure the API Server  address in src/main/resources/target-server.json to allow this client to send REST API calls 
+Configure the API Server address in src/main/resources/target-server.json to allow this client to send REST API calls 
 to the java-ToDoList-Server (https://github.com/LaurentFE/java-ToDoList-Server) set up on your web server.
 
 Use Maven to compile & build.
 
-Launch the resulting Java application to open the GUI.
+Launch the resulting Java application to open the GUI. 
+GUI will not start (or rather, will crash with a Runtime Error, crude and unrefined) if it fails to connect properly to the ToDoList-Server.
 
 ## What
 
